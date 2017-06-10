@@ -50,7 +50,7 @@ def execute_update():
             label_dict={
                 'topic': topic,
             },
-            value=lag
+            value=int(lag)
         )
 
         time.sleep(60)
