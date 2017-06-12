@@ -27,13 +27,13 @@ def update_gauge(metric_name, label_dict, value):
 
 # Execute OS command
 def execute_os_command():
-    cmd = "who"
+    cmd = "./kafka-consumer-groups.sh --new-consumer --describe --group dev --bootstrap-server localhost:9092 |awk 'NR>1 { print $2,$6 }'"
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT)
     return iter(p.stdout.readline, '')
 
 
-# Execute Update metrics and sleep 60 seconds
+# Execute Update metrics
 def execute_update():
     for line in execute_os_command():
         message = line.decode()
@@ -45,28 +45,17 @@ def execute_update():
         topic = message_lines[0]
         lag = message_lines[1]
 
-        update_gauge(
-            metric_name=METRIC_PREFIX + 'offset',
-            label_dict={
-                'topic': topic,
-            },
-            value=int(lag)
-        )
-
-        time.sleep(60)
-
-# Create a metric to track time spent and requests made.
-REQUEST_TIME = Summary('request_processing_seconds', 'Time spent processing request')
+        if lag != 'unknown\n':
+            update_gauge(
+                metric_name=METRIC_PREFIX + 'offset',
+                label_dict={
+                    'topic': topic,
+                },
+                value=int(lag)
+            )
 
 
-# Decorate function with metric.
-@REQUEST_TIME.time()
-def process_request(t):
-    """A dummy function that takes some time."""
-
-    time.sleep(t)
-
-
+# Shutdown
 def signal_handler(signum, frame):
     shutdown()
 
@@ -77,4 +66,6 @@ if __name__ == '__main__':
 
     while True:
         execute_update()
+
+        time.sleep(60)
 
